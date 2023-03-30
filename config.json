@@ -1,0 +1,10 @@
+{
+    "storage_path": "materials/pinterest-storage",
+    "driver_path": "materials/driver",
+    "cookies_path": "materials/driver/cookies",
+    "proxies": null,
+    "users": {
+    },
+    "user_list": [
+    ]
+}
