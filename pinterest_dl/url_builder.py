@@ -1,4 +1,7 @@
 #!/sur/bin/env python3
+"""
+function to build url request to pinterest
+"""
 
 import json
 import time
@@ -6,6 +9,9 @@ from urllib.parse import urlencode, quote_plus
 
 
 def build_url(url, options, source_url="/", context=None):
+    """
+    build url for request
+    """
     query = {
         'source_url': source_url,
         'data': json.dumps({

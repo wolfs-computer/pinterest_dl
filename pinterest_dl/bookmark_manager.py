@@ -1,12 +1,21 @@
 #!/usr/bin/env python3
+"""
+class for managing bokmarks while reading pins/boards
+"""
 
-# class for managing bokmarks while reading pins/boards
 
 class BookmarkManager:
+    """
+    class for managing bookmarks on pinterest pages
+    """
+
     def __init__(self):
         self.bookmarks = {}
 
     def add_bookmark(self, key, bookmark, secondary_key=None):
+        """
+        add bookmark to all bookmarks
+        """
         if key not in self.bookmarks:
             self.bookmarks[key] = {}
 
@@ -16,6 +25,9 @@ class BookmarkManager:
             self.bookmarks[key] = bookmark
 
     def get_bookmark(self, key, secondary_key=None):
+        """
+        get bookmark from all bookmarks
+        """
         try:
             if secondary_key is not None:
                 return self.bookmarks[key][secondary_key]
@@ -25,6 +37,9 @@ class BookmarkManager:
             return None
 
     def del_bookmark(self, key, secondary_key=None):
+        """
+        delete bookmark from all bookmarks
+        """
         if key in self.bookmarks:
             if secondary_key is not None:
                 del self.bookmarks[key][secondary_key]
@@ -32,4 +47,7 @@ class BookmarkManager:
                 del self.bookmarks[key]
 
     def show_bookmarks(self):
+        """
+        return all bookmarks
+        """
         return self.bookmarks

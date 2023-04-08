@@ -1,12 +1,11 @@
 #!/usr/bin/env python3
+"""
+define pinterest_dl options
+"""
 
 import os
 import argparse
-from pinterest_dl.config_parser import read_config, write_config
-
-# TODO: add option groups
-
-# Here argument parser gets default values from config file
+from pinterest_dl import config_parser
 
 
 def create_parser():
@@ -14,26 +13,37 @@ def create_parser():
     create parser for pinterest-dl
     """
 
-    # Config path:
     init_parser = argparse.ArgumentParser(add_help=False)
 
-    default_config_path = "config.json"
+    # get default config paths
+    config_dir, config_path = config_parser.init_config()
+
+    if not os.path.exists(config_dir):
+        # create config dir if dont exists
+        os.mkdir(config_dir)
+
+    if not os.path.exists(config_path):
+        # create config file if dont exists
+        config_parser.write_config(config_path, config_parser.default_config())
+
+    # use specific config
     init_parser.add_argument(
         "-c",
         "--config",
         dest="config_path",
         action="store",
-        default=default_config_path,
+        default=config_path,
         help="specify config",
     )
 
     args, remaining_argv = init_parser.parse_known_args()
 
-    # if no config given use default and write do default path
-    if not os.path.exists(args.config_path):
-        write_config(args.config_path)
+    # if given path exists use it as config
+    if config_path != args.config_path and os.path.exists(args.config_path):
+        config_path = args.config_path
 
-    config = read_config(args.config_path)
+    # read config
+    config = config_parser.read_config(config_path)
 
     # CLI argument parser:
     parser = argparse.ArgumentParser(
@@ -45,15 +55,6 @@ def create_parser():
     # CLI options:
 
     group_pin_opt = parser.add_argument_group("pinterest-dl options")
-
-    # verbose
-    # parser.add_argument(
-    #     "-V",
-    #     dest="verbose",
-    #     action="store_true",
-    #     default=False,
-    #     help="display verbose",
-    # )
 
     # proxy
     group_pin_opt.add_argument(
@@ -94,6 +95,15 @@ def create_parser():
         help="specify cookies path (it will be stored in driver_path, need to start with /)",
     )
 
+    # DEBUG option
+    # group_pin_opt.add_argument(
+    #     "-i",
+    #     "--info",
+    #     dest="info",
+    #     action="store_true",
+    #     default=False,
+    #     help="display values",
+    # )
 
     # Download boards:
 

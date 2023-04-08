@@ -1,59 +1,42 @@
 #!/usr/bin/env python3
+"""
+Main pinterest_dl class declaration
 
+"""
+
+# Selenium
+# browser core
 from selenium import webdriver
 from selenium.webdriver.firefox.service import Service
 from webdriver_manager.firefox import GeckoDriverManager
-
+# core option
 from selenium.webdriver.firefox.options import Options
-
+# UI actions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions
 from selenium.webdriver.common.by import By
-
+# proxy support
 from selenium.webdriver.common.proxy import Proxy, ProxyType
 
 import requests
 import os
 import sys
-from colorama import Fore, Back, Style
+from colorama import Back, Style
 
+# my modules
 from pinterest_dl import pinterest_cookies
 from pinterest_dl import url_builder
 from pinterest_dl import bookmark_manager
 from pinterest_dl import m3u8_dl
-from pinterest_dl import config_parser
-from pinterest_dl import arg_parser
-
-# only for tests
-from pprint import pprint
-
-
-# CLI parser
-parser = arg_parser.create_parser()
-
-# if no options were given
-# display help and exit
-if len(sys.argv) == 1:
-    parser.print_help(sys.stderr)
-    sys.exit(1)
-
-args = parser.parse_args()
-
-
-# Config
-
-# if default config doesnt exists -> write it
-default_config_path = config_parser.default_config_path
-
-if not os.path.exists(default_config_path):
-    config_parser.write_config(default_config_path)
-
-config = config_parser.read_config(default_config_path)
 
 
 # main pinterest-dl class
 class PinterestDL:
-    def __init__(self, email, driver_dir=config["driver_path"], cookies_path=config["cookies_path"], proxies=config["proxies"], storage_path=config["storage_path"]):
+    """
+    Pinterest_dl main class
+    """
+
+    def __init__(self, email, root_dir, storage_path, driver_dir, cookies_path, proxies):
         self.email = email
         self.username = email.split("@")[0]
 
@@ -74,15 +57,24 @@ class PinterestDL:
         # (bookmarks needed to get parts of big page with content)
         self.bookmark_manager = bookmark_manager.BookmarkManager()
 
+        def check_dir(dir_name):
+            if not os.path.exists(dir_name):
+                os.mkdir(dir_name)
+
+        # path for all downloaded files including driver/cookies/boards
+        self.root_dir = root_dir
+        check_dir(self.root_dir)
+
         # path to all downloaded boards and pins
         self.storage_path = storage_path
-        if not os.path.exists(self.storage_path):
-            os.mkdir(self.storage_path)
+        check_dir(self.storage_path)
+
+        # path to driver
+        check_dir(self.driver_dir)
 
         # path to all downloaded boards and pins of the current user
         self.user_storage = f"{storage_path}/{self.username}"
-        if not os.path.exists(self.user_storage):
-            os.mkdir(self.user_storage)
+        check_dir(self.user_storage)
 
         # setup request profile
         self.request_setup()
@@ -172,17 +164,24 @@ class PinterestDL:
 
         self.driver.close()
 
-        # write cookie path to config
-        config["users"][self.username]["cookie_file"] = self.cookies_path
-        config["users"][self.username]["is_loged_in"] = True
-        config_parser.update_config(args.config_path, config)
-
     def login_check(self):
+        """
+        check if user is logged in
+        """
         cookies = pinterest_cookies.cookie_get(self.cookies_path)
         if cookies is not None:
             return True
         else:
             return False
+
+    def get_cookies(self):
+        """
+        return cookie file path if there is one
+        """
+        if self.login_check():
+            return self.cookies_path
+        else:
+            return None
 
     def request_setup(self):
         """
@@ -253,6 +252,10 @@ class PinterestDL:
         return draw
 
     def download_media(self, url, media_path, board_name, section=None):
+        """
+        download media by url form board to specific path
+        """
+
         with open(media_path, "wb") as file:
             board_str = Back.RED + "Board" + Style.RESET_ALL
 
@@ -279,37 +282,10 @@ class PinterestDL:
                     file.write(data)
                     show_progress(data)
 
-    # def get_pins(self, username=None, page_size=250):
-    #     # if no username given it is user profile
-    #     # if there is name -> not your account
-    #     if username is None:
-    #         username = self.username
-    #         own_profile = True
-    #     else:
-    #         own_profile = False
-    #
-    #     next_bookmark = 0
-    #
-    #     options = {
-    #         "username": username,
-    #         "is_own_profile_pins": own_profile,
-    #         "field_set_key": "grid_item",
-    #         "pin_filter": None,
-    #         "bookmarks": [next_bookmark],
-    #         "page_size": page_size,
-    #     }
-    #
-    #     pin_url = "https://www.pinterest.com/resource/UserPinsResource/get/"
-    #
-    #     url = url_builder.build_url(pin_url, options)
-    #
-    #     response = self.request(url).json()
-    #
-    #     # bookmark = response["resource"]["options"]["bookmarks"][0]
-    #
-    #     return response["resource_response"]["data"]
-
     def get_boards(self, username=None, page_size=250):
+        """
+        get all boards from account
+        """
 
         if username is None:
             username = self.username
@@ -344,7 +320,7 @@ class PinterestDL:
 
     def get_board_feed(self, board_id="", page_size=250):
         """
-        return list of pins
+        return list of pins from board
         """
 
         next_bookmark = self.bookmark_manager.get_bookmark(key="board_feed", secondary_key=board_id)
@@ -375,7 +351,7 @@ class PinterestDL:
 
     def get_board_pins(self, board_id, page_size=250):
         """
-        easier pin extracor
+        easier pin extracor then self.get_board_feed()
         """
 
         board = self.get_board_feed(board_id, page_size=page_size)
@@ -386,9 +362,6 @@ class PinterestDL:
             board = self.get_board_pins(board_id)
 
         pins = board_parts
-
-        # delete thing with recommendation
-        # pins.pop(-1)
 
         return pins
 
@@ -421,7 +394,7 @@ class PinterestDL:
 
     def get_board_sections_pins(self, section_id, page_size=250):
         """
-        get all board sections pins
+        get all board section pins
         """
 
         next_bookmark = self.bookmark_manager.get_bookmark(key="board_sections_pins", secondary_key=section_id)
@@ -451,7 +424,7 @@ class PinterestDL:
 
     def download_pin(self, pin, pin_path, board_name, section=None):
         """
-        download all types of pins except one
+        download all types of pins
         """
 
         name = os.path.basename(pin_path)
@@ -471,8 +444,6 @@ class PinterestDL:
         if pin["videos"] is not None:
             url = pin["videos"]["video_list"]["V_HLSV3_WEB"]["url"]
             m3u8_dl.download_m3u8(url, dir, name, external_request_opts)
-            # pprint(pin)
-            # print(url)
 
         # story
         elif pin["story_pin_data"] is not None:
@@ -497,19 +468,14 @@ class PinterestDL:
                     image_path = f"{pin_path}.{step}.jpg"
 
                     self.download_media(url, image_path, board_name, section=section)
-                    # print(pin_path)
 
                     step += 1
                 # story videos
                 elif page["blocks"][0]["block_type"] == 3:
                     url = page["blocks"][0]["video"]["video_list"]["V_EXP4"]["url"]
                     video_path = f"{pin_path}.{step}.mp4"
-                    # pprint(page["blocks"][0]["video"]["video_list"])
-                    # m3u8_dl.download_m3u8(url, dir, f"{name}.{step}")
                     self.download_media(url, video_path, board_name, section=section)
                     step += 1
-                else:
-                    print("-> error?")
 
         # carousel (only images)
         elif pin["carousel_data"] is not None:
@@ -537,6 +503,9 @@ class PinterestDL:
 
     # download section
     def download_section(self, board_name, section):
+        """
+        download only one section
+        """
         section_name = section["title"]
         section_id = section["id"]
 
@@ -556,6 +525,9 @@ class PinterestDL:
 
     # download board
     def download_board(self, board):
+        """
+        download only one board
+        """
         board_id = board["id"]
         board_name = board["name"]
         board_path = self.user_storage + f"/{board_name}/"
@@ -578,302 +550,3 @@ class PinterestDL:
             pin_path = board_path + str(index + 1)
 
             self.download_pin(pin, pin_path, board_name=board_name)
-
-
-def main(args):
-    # get config
-    config = config_parser.read_config(args.config_path)
-
-    # account
-
-    # to add new user
-    if args.user_add:
-        # !!!! rewrite!
-        print("Add new user/s:")
-
-        try:
-            while True:
-                email = input("Email: ")
-                user = email.split("@")[0]
-                password = input("Password (optional): ")
-
-                if email != "" and "@" in email:
-                    # write username to list of users
-                    config["user_list"].append(user)
-                    # create data filed
-                    config["users"].update({user: {"email": email, "is_loged_in": False}})
-
-                    # if password exists create profile and write password to it
-                    if password != "":
-                        config["users"][user].update({"password": password})
-
-                    # if there is cookie file for this account (in case of profile deletion)
-                    possible_cookie_file = config["cookies_path"] + "/" + user
-                    if os.path.exists(possible_cookie_file):
-                        config["users"][user]["cookie_file"] = possible_cookie_file
-                        config["users"][user]["is_loged_in"] = True
-
-                    # update config
-                    config_parser.update_config(args.config_path, config)
-
-        except KeyboardInterrupt:
-            print("\nStop adding users...")
-            return
-
-    # user
-    user = args.user
-
-    # if user == number
-    if user is not None and user.isdigit():
-        user = int(user)
-
-        try:
-            user = config["user_list"][user - 1]
-        except IndexError:
-            print("No user with such index!")
-            return
-
-    # email
-    if config["users"].get(user, None) is not None:
-        email = config["users"][user]["email"]
-    else:
-        email = None
-
-        if user is None:
-            print("No set user!")
-        else:
-            print("No such user!")
-
-        return
-
-    if user is not None:
-        account = PinterestDL(email)
-    else:
-        # if no user in config or arguments
-        print("Specify the user!")
-        return
-
-    # show info about all users
-    if args.user_show:
-        for index, name in enumerate(config["users"].keys()):
-            number = index + 1
-
-            if index == 0:
-                number = "Default"
-
-            print(f'Email: {config["users"][name]["email"]} ({number})')
-            print("Password:", config["users"][name]["password"])
-            print("Login status:", config["users"][name]["is_loged_in"])
-            print("Cookie file:", config["users"][name]["cookie_file"])
-            print("\n")
-
-    # show account
-    if args.list_account:
-        content = {}
-
-        print("geting boards...")
-
-        boards = {}
-        boards_json = account.get_boards()
-
-        for board in boards_json:
-            boards.update({board["name"]: {"name": board["name"], "id": board["id"], "pin_count": board["pin_count"]}})
-
-        print("getting sections...")
-
-        for board in boards:
-
-            board_id = boards[board]["id"]
-            total_board_pin_count = boards[board]["pin_count"]
-            total_section_pin_count = 0
-
-            content.update({board: {"id": board_id, "sections": {}, "total_pin_number": total_board_pin_count, "sections_pin_count": 0, "board_pin_count": 0}})
-
-            board_sections = account.get_board_sections(board_id)
-
-            for section in board_sections:
-                section_name = section["title"]
-                secton_pin_count = section["pin_count"]
-                content[board]["sections"].update({section_name: secton_pin_count})
-
-                total_section_pin_count += secton_pin_count
-
-            content[board]["sectons_pin_count"] = total_section_pin_count
-            content[board]["board_pin_count"] = total_board_pin_count - total_section_pin_count
-
-        # format results
-
-        print("\n" + user)
-
-        if len(content) == 0:
-            print("│")
-            print("└ No boards on account")
-
-        for index, board in enumerate(content):
-            name = board
-            id = content[board]["id"]
-            total_pin_number = content[board]["total_pin_number"]
-            board_pin_count = content[board]["board_pin_count"]
-            sections_pin_count = content[board]["sections_pin_count"]
-            sections = content[board]["sections"]
-
-            pipe1 = "│"
-            pipe2 = "├"
-            if index + 1 == len(content):
-                pipe1 = " "
-                pipe2 = "└"
-
-            # format board
-            print(f"{pipe2}── {board}: {total_pin_number}")
-            print(f"{pipe1}    ├── id -> {id}")
-            print(f"{pipe1}    ├── only board pin number -> {board_pin_count}")
-            if len(sections) > 0:
-                # if no sections
-                print(f"{pipe1}    ├── total sections pin number -> {sections_pin_count}")
-            print(f"{pipe1}    └── sections: {len(sections)}")
-
-            # format board sections
-            for index, section in enumerate(sections):
-                section_name = section
-                section_pin_count = sections[section]
-
-                nest_pipe = "├"
-                if index + 1 == len(sections):
-                    nest_pipe = "└"
-
-                print(f"{pipe1}        {nest_pipe}── {section_name}: {section_pin_count}")
-
-            if index + 1 != len(content):
-                print(pipe1)
-
-    # login in account
-    if args.login:
-        login = True
-        password = config["users"][user]["password"]
-
-        if password is None:
-            print("No password for user!")
-            login = False
-
-        # if already loged in (by config)
-        if config["users"][user]["is_loged_in"]:
-            inp = input("You are already loged in (by config), do you realy want to login? [Y/n] ")
-            login = False
-
-            if inp == "" or inp == "Y":
-                login = True
-
-        if login:
-            print("login...")
-            account.login(password=password)
-
-            # check if logged by cookie files
-            if account.login_check():
-                print("Logged in seccessfully")
-            else:
-                print("Login failed")
-
-    # check for login anyway
-    if not config["users"][user]["is_loged_in"]:
-        print("You are not logged in! Some boards will not be downloaded!")
-
-    # get section
-    # in format <board_name>:<section1>,<section2>.<board_name>:<section>
-
-    if args.sections is not None:
-        sections = {}
-        line = args.sections
-
-        # boards
-        boards = line.split(".")
-        # sections
-        for board in boards:
-            board_name = board.split(":")[0]
-            board_sections = board.split(":")[1].split(",")
-            sections.update({board_name: board_sections})
-
-        # get requested boards names
-        requested_boards = sections.keys()
-
-        # get all boards names from account
-        print("geting boards...")
-        boards_json = account.get_boards()
-
-        boards = {}
-
-        for board in boards_json:
-            boards.update({board["name"]: {"name": board["name"], "id": board["id"]}})
-
-        # check if requested boards exist
-        boards_install = {}
-
-        for board in requested_boards:
-            if board in boards.keys():
-                boards_install.update({board: boards[board]})
-            else:
-                print("No board:", board)
-
-        # download requested boards
-        print("Downloading sectons of boards:", " ".join(boards_install.keys()))
-        print("start downloading...")
-
-        for board in boards_install:
-            board_id = boards_install[board]["id"]
-            # get sections
-            board_sections = account.get_board_sections(board_id)
-            for section in board_sections:
-                section_name = section["title"]
-
-                if section_name in sections[board]:
-                    account.download_section(board, section)
-
-    # get boards
-    if args.boards is not None:
-        # get requested boards names
-
-        requested_boards = args.boards.split(",")
-
-        # get all boards names from account
-        print("geting boards...")
-        boards_json = account.get_boards()
-
-        boards = {}
-
-        for board in boards_json:
-            boards.update({board["name"]: {"name": board["name"], "id": board["id"]}})
-
-        # check if requested boards exist
-        boards_install = {}
-
-        for board in requested_boards:
-            if board in boards.keys():
-                boards_install.update({board: boards[board]})
-            else:
-                print("No board:", board)
-
-        # download requested boards
-        print("Downloading boards:", " ".join(boards_install.keys()))
-        print("start downloading...")
-
-        for board in boards_install:
-            account.download_board(boards_install[board])
-
-    if args.all_boards:
-        # get all boards names from account
-        print("geting boards...")
-        boards_json = account.get_boards()
-
-        boards = {}
-
-        for board in boards_json:
-            boards.update({board["name"]: {"name": board["name"], "id": board["id"]}})
-
-        print("start downloading all boards...")
-
-        for board in boards:
-            account.download_board(boards[board])
-
-
-if __name__ == "__main__":
-    main(args)
-    exit()

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+"""
+function for downloading video in m3u8 format
+"""
 
 import os
 import requests
