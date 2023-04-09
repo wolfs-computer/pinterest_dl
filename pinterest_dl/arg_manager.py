@@ -8,8 +8,8 @@ import sys
 from pinterest_dl.PinterestDL import PinterestDL
 from pinterest_dl import config_parser
 
-
 # PRE args
+
 
 def user_add(config, args):
     """
@@ -28,7 +28,7 @@ def user_add(config, args):
                 # write username to list of users
                 config["user_list"].append(user)
                 # create data filed
-                config["users"].update({user: {"email": email, "is_loged_in": False, "cookie_file": None}})
+                config["users"].update({user: {"email": email, "password": None, "is_loged_in": False, "cookie_file": None}})
 
                 # if password exists create profile and write password to it
                 if password != "":
@@ -95,7 +95,21 @@ def login(args, config, user, account, password):
 
     if password is None:
         print("No password for user!")
-        login = False
+        try:
+            password = input("Set password: ")
+
+            # update config
+            if password != "":
+                config["users"][user]["password"] = password
+                config_parser.write_config(args.config_path, config)
+
+                login = True
+            else:
+                print("\nEmpty password!")
+                sys.exit(1)
+        except KeyboardInterrupt:
+            print("\nEmpty password!")
+            sys.exit(1)
 
     # if already loged in (by config)
     if config["users"][user]["is_loged_in"]:
@@ -328,7 +342,7 @@ def user_show(config):
         print("\n")
 
 
-def main(args, config):
+def arg_execute(args, config):
     """
     main function that executes function depending on args
     """
@@ -341,6 +355,17 @@ def main(args, config):
     # MAIN
 
     user = args.user
+
+    if user is not None:
+        # if user was specified by index
+        if user.isdigit():
+            user = get_user_index(config, user)
+
+    else:
+        # if no user in config or in arguments
+        print("Specify the user!")
+        sys.exit(1)
+
     email = get_email(config, user)
     password = config["users"][user]["password"]
 
@@ -348,19 +373,9 @@ def main(args, config):
     storage_path = args.storage_path
     driver_path = args.driver_path
     cookies_path = args.cookies_path
-    print(cookies_path)
     proxies = args.proxies
 
-    if user is not None:
-        # if user was specified by index
-        if user.isdigit():
-            user = get_user_index(config, user)
-
-        account = PinterestDL(email, root_dir, storage_path, driver_path, cookies_path, proxies)
-    else:
-        # if no user in config or in arguments
-        print("Specify the user!")
-        sys.exit(1)
+    account = PinterestDL(email, root_dir, storage_path, driver_path, cookies_path, proxies)
 
     if args.login:
         login(args, config, user, account, password)
