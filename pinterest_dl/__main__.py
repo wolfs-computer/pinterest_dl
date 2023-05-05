@@ -7,6 +7,9 @@ from pinterest_dl import arg_manager
 
 
 def main():
+    """
+    main pinterest_dl function
+    """
 
     # get CLI arguments:
     parser = arg_parser.create_parser()

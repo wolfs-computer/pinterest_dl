@@ -28,6 +28,11 @@ from pinterest_dl import pinterest_cookies
 from pinterest_dl import url_builder
 from pinterest_dl import bookmark_manager
 from pinterest_dl import m3u8_dl
+from pinterest_dl import progressbar
+
+# temporal
+from pprint import pprint
+from time import sleep
 
 
 # main pinterest-dl class
@@ -230,40 +235,56 @@ class PinterestDL:
 
         return response
 
-    def draw_progress(self, max, total_data, data):
+    def init_progressbar(self, max=20, chars=["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█", " "]):
         """
-        draw progress when downloading
+        init progress bar for downloading indication
         """
 
-        max = 20
-        downloaded = 0
+        # max = 20
+        # downloaded = 0
+        #
+        # def draw(data):
+        #     nonlocal downloaded
+        #     downloaded += len(data)
+        #     done = int(downloaded * max / total_data)
+        #
+        #     sys.stdout.write(f'\r|{"█" * done}{" " * (max - done)}| -- {done}/{max}')
+        #     sys.stdout.flush()
+        #
+        #     if downloaded == total_data:
+        #         sys.stdout.write("\n")
+        #
+        # return draw
 
-        def draw(data):
-            nonlocal downloaded
-            downloaded += len(data)
-            done = int(downloaded * max / total_data)
+        all_bars = progressbar.Progressbar.instances
 
-            sys.stdout.write(f'\r|{"█" * done}{" " * (max - done)}| -- {done}/{max}')
-            sys.stdout.flush()
+        all_ids = [instance.id for instance in all_bars]
 
-            if downloaded == total_data:
-                sys.stdout.write("\n")
+        if len(all_bars) == 0 or 1 not in all_ids:
+            self.progressbar1 = progressbar.Progressbar(1, max=max, chars=chars)
 
-        return draw
+        # return progressbar.Progressbar(total_data, max, chars)
 
+    @progressbar.progress_wrapper
     def download_media(self, url, media_path, board_name, section=None):
         """
         download media by url form board to specific path
         """
 
         with open(media_path, "wb") as file:
+
+            # status here
+            status = ""
+
             board_str = Back.RED + "Board" + Style.RESET_ALL
 
             if section is None:
-                print(f"Downloading {board_str}: {board_name} -> Name: {os.path.basename(media_path)}")
+                status = f"Downloading {board_str}: {board_name} -> Name: {os.path.basename(media_path)}"
             else:
                 section_str = Back.GREEN + "Section" + Style.RESET_ALL
-                print(f"Downloading {board_str}: {board_name} {section_str}: {section} -> Name: {os.path.basename(media_path)}")
+                status = f"Downloading {board_str}: {board_name} {section_str}: {section} -> Name: {os.path.basename(media_path)}"
+
+            # getting file
 
             responce = self.request(url, stream=True)
 
@@ -276,11 +297,21 @@ class PinterestDL:
             if file_length is None:
                 file.write(responce.content)
             else:
-                show_progress = self.draw_progress(10, int(file_length), 0)
+                # init progress bar here
+                self.init_progressbar()
+
+                # progress1 = self.draw_progress(int(file_length))
+                self.progressbar1.setup(int(file_length), update=True)
+                self.progressbar1.final = False
+                self.progressbar1.set_caption(status)
 
                 for data in responce.iter_content(chunk_size=1024):
                     file.write(data)
-                    show_progress(data)
+
+                    if not self.progressbar1.final:
+                        self.progressbar1.step(len(data))
+                        self.progressbar1.update()
+                        sleep(.01)
 
     def get_boards(self, username=None, page_size=250):
         """

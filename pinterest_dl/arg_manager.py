@@ -8,8 +8,8 @@ import sys
 from pinterest_dl.PinterestDL import PinterestDL
 from pinterest_dl import config_parser
 
-# PRE args
 
+# PRE args
 
 def user_add(config, args):
     """
