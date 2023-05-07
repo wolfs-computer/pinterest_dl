@@ -21,7 +21,7 @@ from selenium.webdriver.common.proxy import Proxy, ProxyType
 import requests
 import os
 import sys
-from colorama import Back, Style
+from colorama import Back, Style, Fore
 
 # my modules
 from pinterest_dl import pinterest_cookies
@@ -240,22 +240,6 @@ class PinterestDL:
         init progress bar for downloading indication
         """
 
-        # max = 20
-        # downloaded = 0
-        #
-        # def draw(data):
-        #     nonlocal downloaded
-        #     downloaded += len(data)
-        #     done = int(downloaded * max / total_data)
-        #
-        #     sys.stdout.write(f'\r|{"█" * done}{" " * (max - done)}| -- {done}/{max}')
-        #     sys.stdout.flush()
-        #
-        #     if downloaded == total_data:
-        #         sys.stdout.write("\n")
-        #
-        # return draw
-
         all_bars = progressbar.Progressbar.instances
 
         all_ids = [instance.id for instance in all_bars]
@@ -263,55 +247,79 @@ class PinterestDL:
         if len(all_bars) == 0 or 1 not in all_ids:
             self.progressbar1 = progressbar.Progressbar(1, max=max, chars=chars)
 
-        # return progressbar.Progressbar(total_data, max, chars)
-
     @progressbar.progress_wrapper
-    def download_media(self, url, media_path, board_name, section=None):
+    def download_media(self, url, media_path, board_name, section=None, is_m3u8=False):
         """
         download media by url form board to specific path
         """
+        # status here
+        status = ""
 
-        with open(media_path, "wb") as file:
+        board_str = Fore.RED + "Board" + Style.RESET_ALL
 
-            # status here
-            status = ""
+        if section is None:
+            status = f"Downloading {board_str}: \"{board_name}\" -> Name: \"{os.path.basename(media_path)}\""
+        else:
+            section_str = Fore.GREEN + "Section" + Style.RESET_ALL
+            status = f"Downloading {board_str}: \"{board_name}\" {section_str}: \"{section}\" -> Name: {os.path.basename(media_path)}"
 
-            board_str = Back.RED + "Board" + Style.RESET_ALL
+        # init progress bar here
+        self.init_progressbar()
 
-            if section is None:
-                status = f"Downloading {board_str}: {board_name} -> Name: {os.path.basename(media_path)}"
-            else:
-                section_str = Back.GREEN + "Section" + Style.RESET_ALL
-                status = f"Downloading {board_str}: {board_name} {section_str}: {section} -> Name: {os.path.basename(media_path)}"
+        # format of the progress bar
+        progress_form = "{caption}|{done_section}{process_section}{undone_section}| {done:.1f}%\n{info}{warn}"
 
-            # getting file
+        progress_form_variables = dict.fromkeys(["caption", "done_section", "process_section", "undone_section", "done"])
+        # special fields with warnings and information
+        progress_form_variables["info"] = Fore.BLUE + "Info: " + Style.RESET_ALL + "OK" + "\n"
+        progress_form_variables["warn"] = Fore.YELLOW + "Warning: " + Style.RESET_ALL + "too cool!" + "\n"
 
-            responce = self.request(url, stream=True)
+        # setup progress bar format
+        self.progressbar1.setup(form=progress_form, form_variables=progress_form_variables)
 
-            if responce.status_code != 200:
-                print("bad responce!")
-                return None
+        # max percentage -> 100
+        # max chars in bar progress -> 30
+        self.progressbar1.setup(max=100, char_max=30)
 
-            file_length = responce.headers.get("content-length")
+        self.progressbar1.final = False
+        self.progressbar1.set_caption(status)
 
-            if file_length is None:
-                file.write(responce.content)
-            else:
-                # init progress bar here
-                self.init_progressbar()
+        if is_m3u8:
 
-                # progress1 = self.draw_progress(int(file_length))
-                self.progressbar1.setup(int(file_length), update=True)
-                self.progressbar1.final = False
-                self.progressbar1.set_caption(status)
+            self.progressbar1.setup(update=True)
 
-                for data in responce.iter_content(chunk_size=1024):
-                    file.write(data)
+            external_request_opts = {
+                "headers": self.http.headers,
+                "proxies": self.http.proxies,
+            }
 
-                    if not self.progressbar1.final:
-                        self.progressbar1.step(len(data))
-                        self.progressbar1.update()
-                        sleep(.01)
+            m3u8_dl.download_m3u8(url, os.path.dirname(media_path), os.path.basename(media_path), external_request_opts, self.progressbar1)
+
+        else:
+
+            with open(media_path, "wb") as file:
+                # getting file
+
+                responce = self.request(url, stream=True)
+
+                if responce.status_code != 200:
+                    print("bad responce!")
+                    return None
+
+                file_length = responce.headers.get("content-length")
+
+                if file_length is None:
+                    file.write(responce.content)
+                else:
+                    self.progressbar1.setup(int(file_length), update=True)
+
+                    for data in responce.iter_content(chunk_size=1024):
+                        file.write(data)
+
+                        if not self.progressbar1.final:
+                            # sleep(0.01)
+                            self.progressbar1.step(len(data))
+                            self.progressbar1.update()
 
     def get_boards(self, username=None, page_size=250):
         """
@@ -474,7 +482,8 @@ class PinterestDL:
         # video
         if pin["videos"] is not None:
             url = pin["videos"]["video_list"]["V_HLSV3_WEB"]["url"]
-            m3u8_dl.download_m3u8(url, dir, name, external_request_opts)
+            # m3u8_dl.download_m3u8(url, dir, name, external_request_opts)
+            self.download_media(url, dir+name, board_name, section=section, is_m3u8=True)
 
         # story
         elif pin["story_pin_data"] is not None:

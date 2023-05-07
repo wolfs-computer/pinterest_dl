@@ -2,6 +2,7 @@
 
 import sys
 from time import sleep
+from colorama import Back, Style, Fore
 
 
 class Progressbar:
@@ -15,7 +16,7 @@ class Progressbar:
     instances = []
     final = False
 
-    def __init__(self, id, total_data=0, max=100, chars="█ "):
+    def __init__(self, id=0, total_data=0, max=100, char_max=50, chars="█ "):
         # default values
 
         self.id = id
@@ -29,34 +30,47 @@ class Progressbar:
 
         self.total_data = total_data
         self.max = max
+        self.char_max = char_max
 
         self.bank = 0
         self.done = 0
 
         self.end = False
 
+        self.form = "{caption}|{done_section}{process_section}{undone_section}| -- {done:.1f}/{max}\n"
+        self.form_variables = dict.fromkeys(["caption", "done_section", "process_section", "undone_section", "done", "max"])
+
         self.__class__.instances.append(self)
 
         if id == 0:
             self.max = 0
 
-    def setup(self, total_data, max=None, chars=None, update=False):
+    def setup(self, total_data=None, max=None, char_max=None, chars=None, form=None, form_variables=None, update=False):
         """
         for flexibility of the bar
         """
 
-        self.total_data = total_data
+        if total_data is not None:
+            self.total_data = total_data
 
         if max is not None:
             self.max = max
+
+        if char_max is not None:
+            self.char_max = char_max
 
         if chars is not None:
             self.char_undone = chars[-1]
             self.char_done = chars[-2]
             self.char_process = chars[0:-1]
 
+        if form is not None:
+            self.form = form
+        if form_variables is not None:
+            self.form_variables = form_variables
+
         self.line = ""
-        self.caption = ""
+        # self.caption = ""
 
         self.bank = 0
         self.done = 0
@@ -68,6 +82,7 @@ class Progressbar:
             sys.stdout.write((self.UP + self.CLR) * line_count + "\r")
 
     def step(self, unit, debug=False):
+        # print(self.done, self.max, unit, self.total_data)
         if self.done == self.max:
             return
 
@@ -79,32 +94,51 @@ class Progressbar:
 
         self.done = (self.max * self.bank) / self.total_data
 
-        char_done_number = int(self.done // 1)
+        char_num_done = (self.char_max * self.bank) / self.total_data
+        char_done_number = int(char_num_done // 1)
 
-        # 8 - 1%
+        # len(proc chars) -> 1%
 
-        char_process_number = int((self.done - char_done_number) // (1 / len(self.char_process)))
+        char_process_number = int((char_num_done - char_done_number) // (1 / len(self.char_process)))
 
         # bar draw
 
         done_section = self.char_done * char_done_number
 
-        if char_done_number == self.max:
+        if char_done_number == self.char_max:
             process_section = self.char_done
         else:
             process_section = self.char_process[char_process_number]
 
-        undone_section = self.char_undone * (self.max - char_done_number)
-
-        # debug caption
-        if debug:
-            self.caption = f"{self.max} {self.done} {char_done_number} {char_process_number}\n"
+        undone_section = self.char_undone * (self.char_max - char_done_number)
 
         # final progress line
-        self.line = f'{self.caption}|{done_section}{process_section}{undone_section}| -- {int(self.done)}/{self.max}\n'
+        # self.line = f'{self.caption}|{done_section}{process_section}{undone_section}| -- {int(self.done)}/{self.max}\n'
+
+        default_form_variables = {}
+        default_form_variables["caption"] = self.caption
+        default_form_variables["done_section"] = done_section
+        default_form_variables["process_section"] = process_section
+        default_form_variables["undone_section"] = undone_section
+        default_form_variables["done"] = self.done
+        default_form_variables["max"] = self.max
+
+        # update with values
+        for key in self.form_variables.keys():
+            # <if> to allow custom variables, not only default
+            if key in default_form_variables:
+                self.form_variables[key] = default_form_variables[key]
+
+        self.line = self.form.format(**self.form_variables)
 
     def set_caption(self, text):
         self.caption = text + "\n"
+
+    def add_caption(self, text):
+        self.caption = self.caption.split("\n")[0] + text + "\n"
+
+    def debug(self):
+        self.caption = f"{self.max} {self.done} {char_done_number} {char_process_number}\n"
 
     def list_bars(self):
         return self.instances
@@ -157,24 +191,28 @@ if __name__ == "__main__":
     @progress_wrapper
     def show_progress(a, b):
         manager = Progressbar(0)
-        pr1 = Progressbar(1, a, chars=["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█", " "])
-        pr2 = Progressbar(2, b, chars="* ")
+        pr1 = Progressbar(id=1, total_data=a, max=100, char_max=20, chars=["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█", " "])
+        pr2 = Progressbar(id=2, total_data=b, chars="* ")
 
-        # pr1.set_caption("gh:")
+        form = "-> {caption}{addon}\n|{done_section}{process_section}{undone_section}| -- {done:.1f}%\n"
+        form_variables = dict.fromkeys(["caption", "done_section", "process_section", "undone_section", "done"])
+        form_variables["addon"] = Fore.RED + "test!" + Style.RESET_ALL
+
+        pr1.setup(form=form, form_variables=form_variables)
+
+        pr2.set_caption("gh:")
+        pr2.add_caption(" 1, 2")
 
         for g in range(900):
-            sleep(0.9)
+            sleep(0.1)
             pr1.set_caption(f"Iteration: {g}")
 
             pr1.step(1)
             pr2.step(1)
-
-            if g == 3:
-                pr1.setup(total_data=100)
 
             if not manager.final:
                 manager.update()
             else:
                 break
 
-    show_progress(20, 50)
+    show_progress(20, 100)

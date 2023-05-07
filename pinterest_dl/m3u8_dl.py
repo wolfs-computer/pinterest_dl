@@ -10,6 +10,10 @@ from functools import partial
 from multiprocessing.pool import Pool
 from tqdm import tqdm
 
+from pinterest_dl.progressbar import Progressbar
+
+from time import sleep
+
 
 def request_builder(headers=None, proxies=None, stream=False):
 
@@ -164,7 +168,7 @@ def save_mp4(mv_list, file_name, movie_file_dir):
     clear_ts(movie_file_dir)
 
 
-def download_m3u8(url, path="./", name="test", request_options={}):
+def download_m3u8(url, path="./", name="test", request_options={}, progressbar=Progressbar()):
     # request function
     global request
 
@@ -182,9 +186,28 @@ def download_m3u8(url, path="./", name="test", request_options={}):
     partial_func = partial(download, f_dir=path, num_all=len(m3.url_list))
     p = Pool(10)
 
-    # print(p.imap(partial_func, ts_list))
+    # r = tqdm(p.imap(partial_func, ts_list), total=len(m3.url_list), desc=f"downloading video pin {name}", ascii=True)
+    # mv_list = list(r)
 
-    mv_list = list(tqdm(p.imap(partial_func, ts_list), total=len(m3.url_list), desc=f"downloading video pin {name}", ascii=True))
+    mv_list = []
+
+    total = len(m3.url_list)
+    pre = p.imap(partial_func, ts_list)
+
+    if progressbar.id == 0:
+        progressbar.setup(total)
+        progressbar.set_caption("video:")
+    else:
+        progressbar.setup(total)
+
+    for g in pre:
+
+        mv_list.append(g)
+
+        if not progressbar.final:
+            # sleep(0.9)
+            progressbar.step(1)
+            progressbar.update()
 
     p.close()
     p.join()
@@ -198,4 +221,4 @@ if __name__ == "__main__":
     # request_opts = {}
 
     for index, link in enumerate(links):
-        download_m3u8(link, "./", str(index))
+        download_m3u8(link, "../materials/", str(index))
