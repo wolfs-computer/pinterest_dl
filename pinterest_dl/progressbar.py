@@ -21,11 +21,14 @@ class Progressbar:
 
         self.id = id
 
+        self.manager = False
+
         self.char_undone = chars[-1]
         self.char_done = chars[-2]
         self.char_process = chars[0:-1]
 
         self.line = ""
+
         self.caption = ""
 
         self.total_data = total_data
@@ -44,6 +47,7 @@ class Progressbar:
 
         if id == 0:
             self.max = 0
+            self.manager = True
 
     def setup(self, total_data=None, max=None, char_max=None, chars=None, form=None, form_variables=None, update=False):
         """
@@ -78,8 +82,11 @@ class Progressbar:
         self.end = False
 
         if update:
+            # if progress bar used more then once
+            self.final = False
             line_count = self.string.count("\n")
-            sys.stdout.write((self.UP + self.CLR) * line_count + "\r")
+            # sys.stdout.write((self.UP + self.CLR) * line_count + "\r")
+            sys.stdout.write((self.UP) * line_count + "\r")
 
     def step(self, unit, debug=False):
         # print(self.done, self.max, unit, self.total_data)
@@ -129,6 +136,7 @@ class Progressbar:
             if key in default_form_variables:
                 self.form_variables[key] = default_form_variables[key]
 
+        # final progress bar string
         self.line = self.form.format(**self.form_variables)
 
     def set_caption(self, text):
@@ -143,6 +151,11 @@ class Progressbar:
     def list_bars(self):
         return self.instances
 
+    def cleanup(self):
+        # temporal?
+        line_count = self.string.count("\n")
+        sys.stdout.write(("\n") * line_count + "\r")
+
     def update(self):
         self.string = ""
 
@@ -155,13 +168,25 @@ class Progressbar:
 
             self.string += inst.line
 
+        # for manager caption
+        if self.manager:
+            self.string += self.caption
+
         line_count = self.string.count("\n")
 
-        sys.stdout.write(self.string)
+        # to make progress bar clean (without double symbols at the end)
+        clean_string = ""
+        for part in self.string.split("\n")[0:-1]:
+            # if part != "":
+            clean_string += self.CLR + part + "\n"
+            
+        # write progress to stdout
+        sys.stdout.write(clean_string)
 
         if end_check == 0:
             self.final = True
         else:
+            # get up for new iteration
             sys.stdout.write((self.UP) * line_count + "\r")
 
 
@@ -178,6 +203,9 @@ def progress_wrapper(func):
             sys.stdout.write(HIDE)
 
             func(*args, **kwargs)
+        #
+        # except Exception:
+        #     print("An exception occured!")
 
         finally:
             sys.stdout.write(SHOW)
@@ -205,7 +233,10 @@ if __name__ == "__main__":
 
         for g in range(900):
             sleep(0.1)
+
             pr1.set_caption(f"Iteration: {g}")
+
+            manager.set_caption(f"manager -> {g}")
 
             pr1.step(1)
             pr2.step(1)

@@ -228,13 +228,28 @@ def get_sections(args, account):
             print("No board:", board)
 
     # download requested boards
-    print("Downloading sectons of boards:", " ".join(boards_install.keys()))
+    print("Downloading sectons of boards:", " ".join(boards_install.keys()), )
     print("start downloading...")
 
     for board in boards_install:
         board_id = boards_install[board]["id"]
         # get sections
         board_sections = account.get_board_sections(board_id)
+
+        # cheack if sections exist
+        no_sections = []
+        board_section_names = [section["title"] for section in board_sections]
+
+        for section in sections[board]:
+            # print(sections[board])
+            if section not in board_section_names:
+                sections[board].remove(section)
+                no_sections.append(section)
+
+        if len(no_sections) > 0:
+            print("no such sections:", " ".join(no_sections))
+
+        # download sections
         for section in board_sections:
             section_name = section["title"]
 
