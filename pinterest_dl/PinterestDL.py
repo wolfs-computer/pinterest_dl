@@ -248,41 +248,13 @@ class PinterestDL:
         if len(all_bars) == 0 or 1 not in all_ids:
             self.progressbar1 = progressbar.Progressbar(1, max=max, chars=chars)
 
-            self.progressbar1.info = ""
-            self.progressbar1.warn = ""
-            self.progressbar1.err = ""
+            info_prefix = Fore.BLUE + "Info: " + Style.RESET_ALL
+            warn_prefix = "\n" + "\033[38;2;255;165;0m" + "Warning: " + "\033[m"
+            err_prefix = "\n" + Fore.RED + "Error: " + Style.RESET_ALL
 
-    def progressbar_set_info(self, message, add=False):
-        # special filed with info
-        if self.progressbar1.info != "" and add == True:
-            self.progressbar1.info += message + "\n"
-        else:
-            self.progressbar1.info = Fore.BLUE + "Info: " + Style.RESET_ALL + message + "\n"
-
-    def progressbar_set_warn(self, message, add=False):
-        # special filed with warnings
-        # progress_form_variables["warn"] = Fore.YELLOW + "Warning: " + Style.RESET_ALL + "too cool!" + "\n"
-
-        if self.progressbar1.warn != "" and add == True:
-            self.progressbar1.warn += message + "\n"
-        else:
-            self.progressbar1.warn = "\033[38;2;255;165;0m" + "Warning: " + "\033[m" + message + "\n"
-
-    def progressbar_set_err(self, message, add=False):
-        # special filed with errors
-
-        if self.progressbar1.err != "" and add == True:
-            self.progressbar1.err += message + "\n"
-        else:
-            self.progressbar1.err = Fore.RED + "Error: " + Style.RESET_ALL + message + "\n"
-
-    def progressbar_clear_message(self, message_type):
-        if message_type == "info":
-            self.progressbar1.info = ""
-        elif message_type == "warning":
-            self.progressbar1.warn = ""
-        elif message_type == "error":
-            self.progressbar1.err = ""
+            self.progressbar1.set_format_var("info", "", prefix=info_prefix)
+            self.progressbar1.set_format_var("warn", "", prefix=warn_prefix)
+            self.progressbar1.set_format_var("err", "", prefix=err_prefix)
 
     @progressbar.progress_wrapper
     def download_media(self, url, media_path, board_name, section=None, is_m3u8=False):
@@ -307,10 +279,9 @@ class PinterestDL:
         # format of the progress bar
         progress_form = "{caption}|{done_section}{process_section}{undone_section}| {done:.1f}%\n{info}{warn}{err}"
         progress_form_variables = dict.fromkeys(["caption", "done_section", "process_section", "undone_section", "done"])
-        # placeholder for information, warnings and errors
-        progress_form_variables["info"] = self.progressbar1.info
-        progress_form_variables["warn"] = self.progressbar1.warn
-        progress_form_variables["err"] = self.progressbar1.err
+
+        # clear information format variable
+        self.progressbar1.clear_format_var("info")
 
         # setup progress bar format
         self.progressbar1.setup(form=progress_form, form_variables=progress_form_variables)
@@ -333,15 +304,15 @@ class PinterestDL:
                 "proxies": self.http.proxies,
             }
 
-            # self.progressbar_set_info("m3u8")
-
             try:
                 m3u8_dl.download_m3u8(url, os.path.dirname(media_path), os.path.basename(media_path), external_request_opts, self.progressbar1)
             except custom_errors.BadM3u8File:
                 self.progressbar_set_err(f"Bad .m3u8 file, pin {pin_name}", add=True)
 
         else:
-            # self.progressbar_set_info("not m3u8")
+            # self.progressbar1.update_format_var("info", f"gh - {pin_name}", use_prefix=True, add=True)
+            # self.progressbar1.update_format_var("warn", "gh", use_prefix=True, add=False)
+            # self.progressbar1.update_format_var("err", "gh", use_prefix=True, add=True)
 
             with open(media_path, "wb") as file:
                 # get file
@@ -368,12 +339,8 @@ class PinterestDL:
 
                         # update progress bar
                         if not self.progressbar1.final:
-                            sleep(0.01)
+                            # sleep(0.01)
                             self.progressbar1.update()
-
-                    # if self.progressbar1.final:
-                    #     # print("\n\n\n skdf")
-                    #     self.progressbar1.cleanup()
 
     def get_boards(self, username=None, page_size=250):
         """
@@ -537,7 +504,7 @@ class PinterestDL:
         if pin["videos"] is not None:
             url = pin["videos"]["video_list"]["V_HLSV3_WEB"]["url"]
             # pprint(pin)
-            self.download_media(url, dir+name, board_name, section=section, is_m3u8=True)
+            self.download_media(url, pin_path, board_name, section=section, is_m3u8=True)
 
         # story
         elif pin["story_pin_data"] is not None:

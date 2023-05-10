@@ -185,8 +185,12 @@ def save_mp4(mv_list, file_name, movie_file_dir):
     mv_list.sort(key=lambda x: x.number)
 
     for ts_c in mv_list:
-        with open(file_path, "ab") as f:
-            f.write(ts_c.content)
+        if ts_c == mv_list[0]:
+            with open(file_path, "wb") as f:
+                f.write(ts_c.content)
+        else:
+            with open(file_path, "ab") as f:
+                f.write(ts_c.content)
 
     clear_ts(movie_file_dir)
 
@@ -205,8 +209,8 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
         video_url = sorted(m3.new_type_urls["video"])[-1]
         audio_url = m3.new_type_urls["audio"]
 
-        video_path = path + name + "_video.mp4"
-        audio_path = path + name + "_audio.mp4"
+        video_path = path + "/" + name + "_video.mp4"
+        audio_path = path + "/" + name + "_audio.mp4"
 
         # download video
         with open(video_path, "wb") as video_file, open(audio_path, "wb") as audio_file:
@@ -217,40 +221,44 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
                 print("bad responce!")
                 return None
 
-            video_length = video_responce.headers.get("content-length")
-            audio_length = audio_responce.headers.get("content-length")
-            total_length = int(video_length) + int(audio_length)
+            video_length = int(video_responce.headers.get("content-length"))
+            audio_length = int(audio_responce.headers.get("content-length"))
+            # total_length = int(video_length) + int(audio_length)
 
             if video_length is None:
                 video_file.write(video_responce.content)
             else:
                 # set total amount of data to download
-                progressbar.setup(total_length)
+                progressbar.setup(update=True, total_data=video_length)
+                # display info about downloading video
+                progressbar.update_format_var("info", "Downloading video for pin", use_prefix=True)
 
                 # download file by pieces
                 for data in video_responce.iter_content(chunk_size=1024):
                     video_file.write(data)
 
+                    progressbar.step(len(data))
+
                     # update progress bar
                     if not progressbar.final:
-                        # sleep(0.9)
-                        progressbar.step(1)
                         progressbar.update()
 
             if audio_length is None:
                 audio_file.write(audio_responce.content)
             else:
                 # set total amount of data to download
-                progressbar.setup(total_length)
+                progressbar.setup(update=True, total_data=audio_length)
+                # display info about downloading audio
+                progressbar.update_format_var("info", "Downloading audio for pin", use_prefix=True)
 
                 # download file by pieces
                 for data in audio_responce.iter_content(chunk_size=1024):
                     audio_file.write(data)
 
+                    progressbar.step(len(data))
+
                     # update progress bar
                     if not progressbar.final:
-                        # sleep(0.9)
-                        progressbar.step(1)
                         progressbar.update()
 
         # logger for rendering progress
@@ -263,16 +271,25 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
                     # print('Parameter %s is now %s' % (parameter, value))
                     pass
             
-            def bars_callback(self, bar, attr, value,old_value=None):
+            def bars_callback(self, bar, attr, value, old_value=None):
+                if bar != "t":
+                    return
+
                 # Every time the logger progress is updated, this function is called        
                 total = self.bars[bar]['total']
                 percentage = (value / total) * 100
-                # print(bar,attr,percentage)
 
-                progressbar.setup(total)
+                # set total data
+                if progressbar.total_data != total:
+                    progressbar.setup(update=True, total_data=total)
+
+                # dt = bar, attr, value, percentage, total
+                # progressbar.update_format_var("warn", f"{value}/{total} - {progressbar.bank}")
+                # progressbar.update_format_var("err", f"{dt}")
+
+                progressbar.step(1)
 
                 if not progressbar.final:
-                    progressbar.step(value)
                     progressbar.update()
 
         logger = MyBarLogger()
@@ -281,15 +298,18 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
         video_clip = VideoFileClip(video_path)
         audio_clip = AudioFileClip(audio_path)
 
+        # display info about downloading audio
+        progressbar.update_format_var("info", f"Rendering pin video", use_prefix=True)
+
         final_clip = video_clip.set_audio(audio_clip)
-        final_clip.write_videofile(path + name + ".mp4", verbose=False, logger=logger)
+        temp_audiofile = path + "/" + name + "_temp.mp3"
+        final_clip.write_videofile(path + "/" + name + ".mp4", temp_audiofile=temp_audiofile, verbose=False, logger=logger)
 
         # clean-up
         os.remove(audio_path)
         os.remove(video_path)
 
     else:
-        print(m3.url_list)
         ts_list = [[m3.url_list[i], m3.url_name[i], i] for i in range(len(m3.url_list))]
 
         partial_func = partial(download, f_dir=path, num_all=len(m3.url_list))
@@ -303,7 +323,7 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
         total = len(m3.url_list)
         pre = p.imap(partial_func, ts_list)
 
-        if progressbar.id == 2:
+        if progressbar.id == 0:
             progressbar.setup(total)
             progressbar.set_caption("downloading video")
         else:

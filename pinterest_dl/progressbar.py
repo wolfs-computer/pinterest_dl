@@ -42,6 +42,7 @@ class Progressbar:
 
         self.form = "{caption}|{done_section}{process_section}{undone_section}| -- {done:.1f}/{max}\n"
         self.form_variables = dict.fromkeys(["caption", "done_section", "process_section", "undone_section", "done", "max"])
+        self.new_format_vars = {}
 
         self.__class__.instances.append(self)
 
@@ -49,7 +50,7 @@ class Progressbar:
             self.max = 0
             self.manager = True
 
-    def setup(self, total_data=None, max=None, char_max=None, chars=None, form=None, form_variables=None, update=False):
+    def setup(self, total_data=None, max=None, char_max=None, chars=None, form=None, form_variables=None, new_format_vars=None, update=False):
         """
         for flexibility of the bar
         """
@@ -72,6 +73,8 @@ class Progressbar:
             self.form = form
         if form_variables is not None:
             self.form_variables = form_variables
+        if new_format_vars is not None:
+            self.new_format_vars = new_format_vars
 
         self.line = ""
         # self.caption = ""
@@ -130,32 +133,58 @@ class Progressbar:
         default_form_variables["done"] = self.done
         default_form_variables["max"] = self.max
 
-        # update with values
+        # update with default values
         for key in self.form_variables.keys():
             # <if> to allow custom variables, not only default
             if key in default_form_variables:
                 self.form_variables[key] = default_form_variables[key]
 
-        # final progress bar string
-        self.line = self.form.format(**self.form_variables)
+        # update with new format variables values
+        new_line = ""
 
+        for key in self.new_format_vars.keys():
+            self.form_variables[key] = self.new_format_vars[key]["current"]
+
+            if self.new_format_vars[key]["current"] != "":
+                new_line = "\n"
+
+        # final progress bar string
+        self.line = self.form.format(**self.form_variables) + new_line
+
+    # caption
     def set_caption(self, text):
         self.caption = text + "\n"
 
     def add_caption(self, text):
         self.caption = self.caption.split("\n")[0] + text + "\n"
 
-    def debug(self):
-        self.caption = f"{self.max} {self.done} {char_done_number} {char_process_number}\n"
+    # format variables (info, warnings, errors)
+    def set_format_var(self, key, default_value="", prefix=None):
+        self.new_format_vars[key] = {}
+        self.new_format_vars[key]["default"] = default_value
+        self.new_format_vars[key]["prefix"] = prefix
+        self.new_format_vars[key]["current"] = default_value
 
+    def update_format_var(self, key, value, use_prefix=True, add=False):
+        if add and self.new_format_vars[key]["current"] != "":
+            self.new_format_vars[key]["current"] += value
+        else:
+            if use_prefix:
+                self.new_format_vars[key]["current"] = self.new_format_vars[key]["prefix"] + value
+            else:
+                self.new_format_vars[key]["current"] = value
+
+    def clear_format_var(self, key):
+        self.new_format_vars[key]["current"] = self.new_format_vars[key]["default"]
+
+    # def debug(self):
+    #     self.caption = f"{self.max} {self.done} {char_done_number} {char_process_number}\n"
+
+    # return all bars
     def list_bars(self):
         return self.instances
 
-    def cleanup(self):
-        # temporal?
-        line_count = self.string.count("\n")
-        sys.stdout.write(("\n") * line_count + "\r")
-
+    # redraw
     def update(self):
         self.string = ""
 
@@ -176,8 +205,10 @@ class Progressbar:
 
         # to make progress bar clean (without double symbols at the end)
         clean_string = ""
-        for part in self.string.split("\n")[0:-1]:
-            # if part != "":
+        for index, part in enumerate(self.string.split("\n")):
+            if index == len(self.string.split("\n")) - 1:
+                clean_string += self.CLR + part
+                break
             clean_string += self.CLR + part + "\n"
             
         # write progress to stdout
