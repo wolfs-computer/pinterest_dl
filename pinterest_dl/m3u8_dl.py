@@ -229,7 +229,7 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
                 video_file.write(video_responce.content)
             else:
                 # set total amount of data to download
-                progressbar.setup(update=True, total_data=video_length)
+                progressbar.setup(total_data=video_length)
                 # display info about downloading video
                 progressbar.update_format_var("info", "Downloading video for pin", use_prefix=True)
 
@@ -327,15 +327,17 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
             progressbar.setup(total)
             progressbar.set_caption("downloading video")
         else:
-            progressbar.setup(total)
+            progressbar.setup(total_data=total)
+            progressbar.update_format_var("info", "Downloading video", use_prefix=True, add=True)
 
         for g in pre:
 
             mv_list.append(g)
 
+            progressbar.step(1)
+
             if not progressbar.final:
                 # sleep(0.9)
-                progressbar.step(1)
                 progressbar.update()
 
         p.close()

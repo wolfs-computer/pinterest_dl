@@ -11,6 +11,18 @@ from pinterest_dl import config_parser
 
 # PRE args
 
+def get_proxies(args):
+    if args.proxies is not None:
+        l = args.proxies.split(",")
+        if len(l) > 1:
+            proxies = {"https": l[0], "http": l[1]}
+        else:
+            proxies = {"https": l[0], "http": l[0]}
+
+        return proxies
+    else:
+        return None
+
 def user_add(config, args):
     """
     add new user
@@ -350,8 +362,12 @@ def user_show(config):
         if index == 0:
             number = "Default"
 
+        # hide password
+        password = config["users"][name]["password"]
+        hidden_password = "".join(["*" for letter in password])
+
         print(f'Email: {config["users"][name]["email"]} ({number})')
-        print("Password:", config["users"][name]["password"])
+        print("Password:", hidden_password)
         print("Login status:", config["users"][name]["is_loged_in"])
         print("Cookie file:", config["users"][name]["cookie_file"])
         print("\n")
@@ -388,7 +404,7 @@ def arg_execute(args, config):
     storage_path = args.storage_path
     driver_path = args.driver_path
     cookies_path = args.cookies_path
-    proxies = args.proxies
+    proxies = get_proxies(args)
 
     account = PinterestDL(email, root_dir, storage_path, driver_path, cookies_path, proxies)
 

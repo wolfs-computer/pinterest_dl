@@ -2,7 +2,7 @@
 
 import sys
 from time import sleep
-from colorama import Back, Style, Fore
+from colorama import Style, Fore
 
 
 class Progressbar:

@@ -51,11 +51,7 @@ class PinterestDL:
         self.cookies_path = f"{cookies_path}/{self.username}"
         # proxies
         if proxies is not None:
-            proxies = proxies.split(",")
-            if len(proxies) > 1:
-                self.proxies = {"http": proxies[1], "https": proxies[0]}
-            else:
-                self.proxies = {"https": proxies[0]}
+            self.proxies = proxies
         else:
             self.proxies = None
 
@@ -203,7 +199,7 @@ class PinterestDL:
 
         # self.http.proxies = {'http': 'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
         # self.http.proxies = {'https': 'socks5://127.0.0.1:9050'}
-        # TOR example -> session.proxies = {'http':  'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
+        # TOR example -> session.proxies = {'http': 'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
 
         # set headers
         headers = {
@@ -296,6 +292,8 @@ class PinterestDL:
         # to support usage of the bar more then once
         self.progressbar1.setup(update=True)
 
+        # self.progressbar1.update_format_var("info", f"gh - {pin_name}", use_prefix=True, add=True)
+
         if is_m3u8:
             # if downloading video from .m3u8 file
 
@@ -339,7 +337,8 @@ class PinterestDL:
 
                         # update progress bar
                         if not self.progressbar1.final:
-                            # sleep(0.01)
+                            if ".mp4" not in media_path:
+                                sleep(0.006)
                             self.progressbar1.update()
 
     def get_boards(self, username=None, page_size=250):
@@ -489,11 +488,6 @@ class PinterestDL:
 
         name = os.path.basename(pin_path)
         dir = pin_path.split(name)[0]
-        # options for external request function
-        external_request_opts = {
-            "headers": self.http.headers,
-            "proxies": self.http.proxies,
-        }
 
         # recomendations at the end of the board
         if pin["type"] == "story":
