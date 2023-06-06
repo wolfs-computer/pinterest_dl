@@ -337,8 +337,8 @@ class PinterestDL:
 
                         # update progress bar
                         if not self.progressbar1.final:
-                            if ".mp4" not in media_path:
-                                sleep(0.006)
+                            # if ".mp4" not in media_path:
+                            #     sleep(0.006)
                             self.progressbar1.update()
 
     def get_boards(self, username=None, page_size=250):

@@ -9,7 +9,7 @@ import requests
 from functools import partial
 from multiprocessing.pool import Pool
 # from tqdm import tqdm
-from moviepy.editor import VideoFileClip, AudioFileClip, concatenate_videoclips
+from moviepy.editor import VideoFileClip, AudioFileClip
 from proglog import ProgressBarLogger
 
 from pinterest_dl.progressbar import Progressbar
@@ -263,19 +263,19 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
 
         # logger for rendering progress
         class MyBarLogger(ProgressBarLogger):
-            
+
             def callback(self, **changes):
                 # Every time the logger message is updated, this function is called with
                 # the `changes` dictionary of the form `parameter: new value`.
                 for (parameter, value) in changes.items():
                     # print('Parameter %s is now %s' % (parameter, value))
                     pass
-            
+
             def bars_callback(self, bar, attr, value, old_value=None):
                 if bar != "t":
                     return
 
-                # Every time the logger progress is updated, this function is called        
+                # Every time the logger progress is updated, this function is called
                 total = self.bars[bar]['total']
                 percentage = (value / total) * 100
 
@@ -299,7 +299,7 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
         audio_clip = AudioFileClip(audio_path)
 
         # display info about downloading audio
-        progressbar.update_format_var("info", f"Rendering pin video", use_prefix=True)
+        progressbar.update_format_var("info", "Rendering pin video", use_prefix=True)
 
         final_clip = video_clip.set_audio(audio_clip)
         temp_audiofile = path + "/" + name + "_temp.mp3"
