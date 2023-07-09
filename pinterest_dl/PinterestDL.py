@@ -42,9 +42,9 @@ class PinterestDL:
     Pinterest_dl main class
     """
 
-    def __init__(self, email, root_dir, storage_path, driver_dir, cookies_path, proxies):
+    def __init__(self, username, root_dir, storage_path, driver_dir, cookies_path, proxies, email=None):
         self.email = email
-        self.username = email.split("@")[0]
+        self.username = username
 
         # options
         self.driver_dir = driver_dir
@@ -369,13 +369,23 @@ class PinterestDL:
         url = "https://www.pinterest.com/_ngjs/resource/BoardsResource/get/"
         url = url_builder.build_url(url, options, source_url=source_url)
 
-        response = self.request(url).json()
+        response = self.request(url)
 
-        bookmark = response["resource"]["options"]["bookmarks"][0]
+        if response.status_code != 200:
+            print("Error:", response.status_code)
+
+            if response.status_code == 404:
+                print("No requested user in Pinterest!")
+
+            sys.exit(1)
+
+        json = response.json()
+
+        bookmark = json["resource"]["options"]["bookmarks"][0]
 
         self.bookmark_manager.add_bookmark(key="boards", secondary_key=username, bookmark=bookmark)
 
-        return response["resource_response"]["data"]
+        return json["resource_response"]["data"]
 
     def get_board_feed(self, board_id="", page_size=250):
         """

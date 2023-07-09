@@ -21,7 +21,6 @@ def cookie_get(cookie_path):
             cookies = json.loads(content)
             return cookies
     except Exception:
-        print("no cookies stored")
         return None
 
 
@@ -35,5 +34,3 @@ def cookie_write(cookie_path, cookies):
 
     with open(cookie_path, "w") as file:
         file.write(json.dumps(cookies))
-
-    print("finish writing cookies!")

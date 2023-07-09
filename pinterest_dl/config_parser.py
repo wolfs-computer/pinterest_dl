@@ -71,6 +71,22 @@ def read_config(config_path):
     return data
 
 
+def update_config(config_path, config):
+    """
+    update config with login state
+    """
+
+    cookies = os.listdir(config["cookies_path"])
+
+    # check cookies in their dir
+    for user in config["user_list"]:
+        if user not in cookies:
+            config["users"][user]["is_logged_in"] = False
+            config["users"][user]["cookie_file"] = None
+
+    write_config(config_path, config)
+
+
 if __name__ == "__main__":
     config = default_config()
 

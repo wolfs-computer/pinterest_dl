@@ -1,11 +1,17 @@
 #!/usr/bin/env python3
 """
-define pinterest_dl options
+define pinterest-dl CLI options
 """
 
 import os
 import argparse
 from pinterest_dl import config_parser
+
+
+# basic:
+# help (-h/--help)
+# verbose (-v/--verbose)
+# version (-V/--version)
 
 
 def create_parser():
@@ -56,6 +62,16 @@ def create_parser():
 
     group_pin_opt = parser.add_argument_group("pinterest-dl options")
 
+    # !! DEBUG option !!
+    group_pin_opt.add_argument(
+        "-i",
+        "--info",
+        dest="info",
+        action="store_true",
+        default=False,
+        help="display values",
+    )
+
     # proxy
     group_pin_opt.add_argument(
         "-p",
@@ -79,7 +95,7 @@ def create_parser():
 
     # driver path
     group_pin_opt.add_argument(
-        "--driver_path",
+        "--driver",
         dest="driver_path",
         action="store",
         default=config["driver_path"],
@@ -88,22 +104,12 @@ def create_parser():
 
     # cookies path
     group_pin_opt.add_argument(
-        "--cookies_path",
+        "--cookies",
         dest="cookies_path",
         action="store",
         default=config["cookies_path"],
-        help="specify cookies path (it will be stored in driver_path, need to start with /)",
+        help="specify cookies path (it will be stored in driver_path, must start with /)",
     )
-
-    # DEBUG option
-    # group_pin_opt.add_argument(
-    #     "-i",
-    #     "--info",
-    #     dest="info",
-    #     action="store_true",
-    #     default=False,
-    #     help="display values",
-    # )
 
     # Download boards:
 
@@ -126,15 +132,18 @@ def create_parser():
 
     # add new user
     group_dl.add_argument(
-        "--user-add",
+        "-a",
+        "--add-user",
         dest="user_add",
-        action="store_true",
-        default=False,
-        help="specify user to add",
+        action="append",
+        default=None,
+        nargs="+",
+        help="specify user/s to add in config, -a <email> <password> -a <email> -a ..., use quotes if email or password contain whitespace",
     )
 
     # show all users and their info
     group_dl.add_argument(
+        "-o",
         "--user-show",
         dest="user_show",
         action="store_true",
@@ -185,7 +194,7 @@ def create_parser():
         dest="list_account",
         action="store_true",
         default=False,
-        help="list all boards and section",
+        help="list all boards and sections",
     )
 
     return parser

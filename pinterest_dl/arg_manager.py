@@ -1,67 +1,82 @@
 #!/usr/bin/env python3
 """
-function for arguments manager
+functions for CLI
 """
 
 import os
 import sys
 from pinterest_dl.PinterestDL import PinterestDL
 from pinterest_dl import config_parser
+from colorama import Style, Fore
 
 
 # PRE args
 
 def get_proxies(args):
+    """
+    use proxy
+    """
+
     if args.proxies is not None:
-        l = args.proxies.split(",")
-        if len(l) > 1:
-            proxies = {"https": l[0], "http": l[1]}
+        proxies = args.proxies.split(",")
+        if len(proxies) > 1:
+            proxies = {"https": proxies[0], "http": proxies[1]}
         else:
-            proxies = {"https": l[0], "http": l[0]}
+            proxies = {"https": proxies[0], "http": proxies[0]}
 
         return proxies
     else:
         return None
 
+
 def user_add(config, args):
     """
-    add new user
+    add new user/s
     """
 
-    print("Add new user/s:")
+    for user in args.user_add:
 
-    try:
-        while True:
-            email = input("Email: ")
-            user = email.split("@")[0]
-            password = input("Password (optional): ")
+        email = user[0]
+        password = None
+        if len(user) > 1:
+            password = user[1]
 
-            if email != "" and "@" in email:
-                # write username to list of users
-                config["user_list"].append(user)
-                # create data filed
-                config["users"].update({user: {"email": email, "password": None, "is_loged_in": False, "cookie_file": None}})
+        user = email.split("@")[0]
 
-                # if password exists create profile and write password to it
-                if password != "":
-                    config["users"][user].update({"password": password})
+        if email != "" and "@" in email:
 
-                # if there is cookie file for this account (in case of profile deletion)
-                possible_cookie_file = config["cookies_path"] + "/" + user
-                if os.path.exists(possible_cookie_file):
-                    config["users"][user]["cookie_file"] = possible_cookie_file
-                    config["users"][user]["is_loged_in"] = True
+            if user in config["users"]:
+                print(f"User \"{user}\" already exists")
+                continue
 
-                # update config
-                config_parser.write_config(args.config_path, config)
+            # write username to list of users
+            config["user_list"].append(user)
+            # create data filed
+            config["users"].update({user: {"email": email, "password": None, "is_logged_in": False, "cookie_file": None}})
 
-    except KeyboardInterrupt:
-        print("\nStop adding users...")
-        sys.exit(1)
+            print("Added user:", user)
+
+            # if password exists create profile and write password to it
+            if password != "":
+                config["users"][user].update({"password": password})
+                print("Added password for:", user)
+            else:
+                print("No password for:", user)
+
+            # if there is cookie file for this account (in case of profile deletion)
+            possible_cookie_file = config["cookies_path"] + "/" + user
+            if os.path.exists(possible_cookie_file):
+                config["users"][user]["cookie_file"] = possible_cookie_file
+                config["users"][user]["is_logged_in"] = True
+                print("Found login data for:", user)
+
+            # update config
+            config_parser.write_config(args.config_path, config)
+        else:
+            print(f"Invalid email: \"{user}\"")
 
 
 # MAIN args
-
 
 def get_email(config, user):
     """
@@ -69,22 +84,21 @@ def get_email(config, user):
     """
     if config["users"].get(user, None) is not None:
         email = config["users"][user]["email"]
-
-        return email
     else:
         email = None
 
         if user is None:
             print("No set user!")
+            sys.exit(1)
         else:
-            print("No such user!")
+            print("No such user in config!")
 
-        sys.exit(1)
+    return email
 
 
 def get_user_index(config, user):
     """
-    if case user means index of user in config
+    in case user means index of user in config
     """
 
     user = int(user)
@@ -123,9 +137,9 @@ def login(args, config, user, account, password):
             print("\nEmpty password!")
             sys.exit(1)
 
-    # if already loged in (by config)
-    if config["users"][user]["is_loged_in"]:
-        inp = input("You are already loged in (by config), do you realy want to login? [Y/n] ")
+    # if already logged in (by config)
+    if config["users"][user]["is_logged_in"]:
+        inp = input("You are already logged in (by config), do you realy want to login? [Y/n] ")
         login = False
 
         if inp == "" or inp == "Y":
@@ -140,7 +154,7 @@ def login(args, config, user, account, password):
             print("Logged in seccessfully")
 
             # update config
-            config["users"][user]["is_loged_in"] = True
+            config["users"][user]["is_logged_in"] = True
             config["users"][user]["cookie_file"] = account.get_cookies()
             config_parser.write_config(args.config_path, config)
         else:
@@ -303,12 +317,17 @@ def list_account(user, account):
 
             total_section_pin_count += secton_pin_count
 
-        content[board]["sectons_pin_count"] = total_section_pin_count
+        content[board]["sections_pin_count"] = total_section_pin_count
         content[board]["board_pin_count"] = total_board_pin_count - total_section_pin_count
 
     # format results
 
-    print("\n" + user)
+    if account.login_check():
+        login_state = Fore.GREEN + "Logged in" + Style.RESET_ALL
+    else:
+        login_state = Fore.RED + "Not logged in!" + Style.RESET_ALL
+
+    print(f"\n{user} ({login_state})")
 
     if len(content) == 0:
         print("│")
@@ -319,6 +338,7 @@ def list_account(user, account):
         total_pin_number = content[board]["total_pin_number"]
         board_pin_count = content[board]["board_pin_count"]
         sections_pin_count = content[board]["sections_pin_count"]
+
         sections = content[board]["sections"]
 
         pipe1 = "│"
@@ -329,12 +349,14 @@ def list_account(user, account):
 
         # format board
         print(f"{pipe2}── {board}: {total_pin_number}")
-        print(f"{pipe1}    ├── id -> {id}")
-        print(f"{pipe1}    ├── only board pin number -> {board_pin_count}")
         if len(sections) > 0:
-            # if no sections
+            print(f"{pipe1}    ├── id -> {id}")
+            print(f"{pipe1}    ├── only board pin number -> {board_pin_count}")
             print(f"{pipe1}    ├── total sections pin number -> {sections_pin_count}")
-        print(f"{pipe1}    └── sections: {len(sections)}")
+            print(f"{pipe1}    └── sections: {len(sections)}")
+        else:
+            print(f"{pipe1}    └── id -> {id}")
+
 
         # format board sections
         for index, section in enumerate(sections):
@@ -368,9 +390,11 @@ def user_show(config):
 
         print(f'Email: {config["users"][name]["email"]} ({number})')
         print("Password:", hidden_password)
-        print("Login status:", config["users"][name]["is_loged_in"])
+        print("Login status:", config["users"][name]["is_logged_in"])
         print("Cookie file:", config["users"][name]["cookie_file"])
-        print("\n")
+
+        if index + 1 != len(config["users"].keys()):
+            print("\n")
 
 
 def arg_execute(args, config):
@@ -380,25 +404,36 @@ def arg_execute(args, config):
 
     # PRE
 
+    # !! DEBUG option !!
+    if args.info:
+        from pprint import pprint
+        pprint(args)
+        print(args.user_add)
+
+        sys.exit(1)
+
     if args.user_add:
         user_add(config, args)
+        sys.exit(1)
+
 
     # MAIN
 
     user = args.user
 
-    if user is not None:
+    if user.isdigit():
         # if user was specified by index
-        if user.isdigit():
-            user = get_user_index(config, user)
+        user = get_user_index(config, user)
 
-    else:
-        # if no user in config or in arguments
-        print("Specify the user!")
-        sys.exit(1)
 
     email = get_email(config, user)
-    password = config["users"][user]["password"]
+
+    if user[:1] == "@":
+        # to indicate foreign account
+        password = 1
+        user = user[1:]
+    else:
+        password = config["users"][user]["password"]
 
     root_dir = config["root_dir"]
     storage_path = args.storage_path
@@ -406,20 +441,30 @@ def arg_execute(args, config):
     cookies_path = args.cookies_path
     proxies = get_proxies(args)
 
-    account = PinterestDL(email, root_dir, storage_path, driver_path, cookies_path, proxies)
+    account = PinterestDL(user, root_dir, storage_path, driver_path, cookies_path, proxies, email)
+
 
     if args.login:
-        login(args, config, user, account, password)
+        if password is not None:
+            login(args, config, user, account, password)
+        else:
+            print("No password for user!")
 
-    # check for login
-    if not config["users"][user]["is_loged_in"]:
-        print("You are not logged in! Some boards will not be ignored!")
+
+    # update config with login state
+    config_parser.update_config(args.config_path, config)
+
 
     # after login args:
 
     # show info about all users
     if args.user_show:
         user_show(config)
+        sys.exit(1)
+
+    # check for login
+    if type(password) == "str" and not config["users"][user]["is_logged_in"]:
+        print(f"You are {Fore.RED}not logged in!{Style.RESET_ALL} Some boards will not be displayed/used!\n")
 
     # list account
     if args.list_account:
