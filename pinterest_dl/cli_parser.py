@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-define pinterest-dl CLI options
+definition of pinterest-dl CLI options
 """
 
 import os
 import argparse
-from pinterest_dl import config_parser
+from pinterest_dl import config_functions
 
 
 # basic:
@@ -22,7 +22,7 @@ def create_parser():
     init_parser = argparse.ArgumentParser(add_help=False)
 
     # get default config paths
-    config_dir, config_path = config_parser.init_config()
+    config_dir, config_path = config_functions.init_config()
 
     if not os.path.exists(config_dir):
         # create config dir if dont exists
@@ -30,7 +30,7 @@ def create_parser():
 
     if not os.path.exists(config_path):
         # create config file if dont exists
-        config_parser.write_config(config_path, config_parser.default_config())
+        config_functions.write_config(config_path, config_functions.default_config())
 
     # use specific config
     init_parser.add_argument(
@@ -39,6 +39,7 @@ def create_parser():
         dest="config_path",
         action="store",
         default=config_path,
+        metavar="<config path>",
         help="specify config",
     )
 
@@ -49,7 +50,7 @@ def create_parser():
         config_path = args.config_path
 
     # read config
-    config = config_parser.read_config(config_path)
+    config = config_functions.read_config(config_path)
 
     # CLI argument parser:
     parser = argparse.ArgumentParser(
@@ -60,13 +61,13 @@ def create_parser():
 
     # CLI options:
 
-    group_pin_opt = parser.add_argument_group("pinterest-dl options")
+    group_pin_opt = parser.add_argument_group("Pinterest-dl options")
 
     # !! DEBUG option !!
     group_pin_opt.add_argument(
         "-i",
         "--info",
-        dest="info",
+        dest="show_info",
         action="store_true",
         default=False,
         help="display values",
@@ -79,6 +80,7 @@ def create_parser():
         dest="proxies",
         action="store",
         default=config["proxies"],
+        metavar="<url>,<url>",
         help="specify pinterest-dl proxies comma separated",
     )
 
@@ -90,6 +92,7 @@ def create_parser():
         dest="storage_path",
         action="store",
         default=config["storage_path"],
+        metavar="<storage path>",
         help="specify pinterest-dl storage path",
     )
 
@@ -99,6 +102,7 @@ def create_parser():
         dest="driver_path",
         action="store",
         default=config["driver_path"],
+        metavar="<driver path>",
         help="specify driver path",
     )
 
@@ -108,6 +112,7 @@ def create_parser():
         dest="cookies_path",
         action="store",
         default=config["cookies_path"],
+        metavar="<cookie path>",
         help="specify cookies path (it will be stored in driver_path, must start with /)",
     )
 
@@ -127,6 +132,7 @@ def create_parser():
         dest="user",
         action="store",
         default=default_user,
+        metavar="<user>",
         help="specify user for downloading, (username/index in config)",
     )
 
@@ -137,6 +143,7 @@ def create_parser():
         dest="user_add",
         action="append",
         default=None,
+        metavar="<email> <password>",
         nargs="+",
         help="specify user/s to add in config, -a <email> <password> -a <email> -a ..., use quotes if email or password contain whitespace",
     )
@@ -151,7 +158,7 @@ def create_parser():
         help="show info about all users",
     )
 
-    # login to account
+    # login in to account with password
     group_dl.add_argument(
         "-l",
         "--login",
@@ -161,13 +168,14 @@ def create_parser():
         help="login to account",
     )
 
-    # specify boards
+    # download specified boards
     group_dl.add_argument(
         "-b",
         "--boards",
         dest="boards",
         action="store",
         default=None,
+        metavar="<board>,<board>",
         help="specify boards to download, separated by <,>",
     )
 
@@ -180,15 +188,18 @@ def create_parser():
         help="download all boards on current account",
     )
 
+    # download specified sections of boards
     group_dl.add_argument(
         "-s",
         "--sections",
         dest="sections",
         action="store",
         default=None,
-        help="specify section of the board to download, in format <board_name>:<section1>,<section2>.<board_name>:<section>",
+        metavar="<board_name>:<section1>,<section2>.<board_name>:<section>",
+        help="specify section of the board to download",
     )
 
+    # list all account boards and sections
     group_dl.add_argument(
         "--list",
         dest="list_account",

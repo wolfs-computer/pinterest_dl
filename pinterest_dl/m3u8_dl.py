@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-function for downloading video in m3u8 format
+functions for downloading video in m3u8 format
 """
 
 import os
@@ -15,17 +15,19 @@ from proglog import ProgressBarLogger
 from pinterest_dl.progressbar import Progressbar
 from pinterest_dl import custom_errors
 
+# DEBUG
 from time import sleep
 
 
-# def request_builder(headers=None, proxies=None, stream=False):
-#
-#     return request
 global request_options
 request_options = {}
 
 
 class M3u8_Download:
+    """
+    main class for downloading .m3u8 files
+    """
+
     def __init__(self, url, file_name):
         self.url = url
         self.file_name = file_name
@@ -49,11 +51,6 @@ class M3u8_Download:
         if base_url is None:
             base_url = self.base_url
 
-        # if "#" in url:
-        #     print(url)
-        #     url = url.split("#")[0] + url.split('"')[-2]
-        #     print(url)
-
         # get file
         m3u8 = self.request(url)
 
@@ -65,7 +62,7 @@ class M3u8_Download:
             second_half = second_half.split("\"")[-2]
 
             repaired_url = "/".join(first_half) + "/" + second_half
-            
+
             m3u8 = self.request(repaired_url)
 
 
@@ -78,19 +75,18 @@ class M3u8_Download:
         content = m3u8_content.split("\n")
 
         for line in content:
-            # print(line)
             if ".ts" in line:
                 line_split = line.split("/")
                 self.url_name.append(line_split[-1])
                 self.url_list.append(base_url + "/" + line_split[-1])
 
-            elif ".cmfv" in line and not "#" in line:
+            elif ".cmfv" in line and "#" not in line:
                 self.is_new_type = True
                 line_split = line.split("/")
                 self.new_type_urls["video"].append(base_url + "/" + line_split[-1])
                 return
 
-            elif ".cmfa" in line and not "#" in line:
+            elif ".cmfa" in line and "#" not in line:
                 self.is_new_type = True
                 line_split = line.split("/")
                 self.new_type_urls["audio"] = base_url + "/" + line_split[-1]
@@ -114,7 +110,6 @@ class M3u8_Download:
         self.first(new_url, new_base_url)
 
 
-# ??
 class Ts_Download:
     """
     class for downloading .ts parts
@@ -277,7 +272,7 @@ def download_m3u8(url, path="./", name="test", request_opt={}, progressbar=Progr
 
                 # Every time the logger progress is updated, this function is called
                 total = self.bars[bar]['total']
-                percentage = (value / total) * 100
+                # percentage = (value / total) * 100
 
                 # set total data
                 if progressbar.total_data != total:

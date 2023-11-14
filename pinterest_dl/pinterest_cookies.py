@@ -11,6 +11,7 @@ def cookie_get(cookie_path):
     """
     get cookies from cookie_path
     """
+
     dir = os.path.dirname(cookie_path)
     if not os.path.exists(dir):
         os.mkdir(dir)
@@ -28,6 +29,7 @@ def cookie_write(cookie_path, cookies):
     """
     write cookies to cookie_path
     """
+
     dir = os.path.dirname(cookie_path)
     if not os.path.exists(dir):
         os.mkdir(dir)

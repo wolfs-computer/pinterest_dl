@@ -92,7 +92,6 @@ class Progressbar:
             sys.stdout.write((self.UP) * line_count + "\r")
 
     def step(self, unit, debug=False):
-        # print(self.done, self.max, unit, self.total_data)
         if self.done == self.max:
             return
 
@@ -210,7 +209,7 @@ class Progressbar:
                 clean_string += self.CLR + part
                 break
             clean_string += self.CLR + part + "\n"
-            
+
         # write progress to stdout
         sys.stdout.write(clean_string)
 
@@ -234,9 +233,6 @@ def progress_wrapper(func):
             sys.stdout.write(HIDE)
 
             func(*args, **kwargs)
-        #
-        # except Exception:
-        #     print("An exception occured!")
 
         finally:
             sys.stdout.write(SHOW)

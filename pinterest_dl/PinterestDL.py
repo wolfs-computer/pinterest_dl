@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """
 Main pinterest_dl class declaration
-
 """
 
 # Selenium
@@ -31,7 +30,7 @@ from pinterest_dl import m3u8_dl
 from pinterest_dl import progressbar
 from pinterest_dl import custom_errors
 
-# temporal
+# DEBUG
 from pprint import pprint
 from time import sleep
 
@@ -231,6 +230,12 @@ class PinterestDL:
         # print(check)
 
         return response
+
+    def save_pin_data(self, board):
+        pass
+
+    def check_pin_exists(self):
+        pass
 
     def init_progressbar(self, max=20, chars=["▏", "▎", "▍", "▌", "▋", "▊", "▉", "█", " "]):
         """
@@ -535,6 +540,7 @@ class PinterestDL:
                     self.download_media(url, image_path, board_name, section=section)
 
                     step += 1
+
                 # story videos
                 elif page["blocks"][0]["block_type"] == 3:
                     url = page["blocks"][0]["video"]["video_list"]["V_EXP4"]["url"]
@@ -571,6 +577,7 @@ class PinterestDL:
         """
         download only one section
         """
+
         section_name = section["title"]
         section_id = section["id"]
 
@@ -579,7 +586,7 @@ class PinterestDL:
         section_path = board_path + section_name + "/"
 
         if not os.path.exists(section_path):
-            os.mkdir(section_path)
+            os.makedirs(section_path)
 
         pins = self.get_board_sections_pins(section_id)
 
@@ -593,6 +600,7 @@ class PinterestDL:
         """
         download only one board
         """
+
         board_id = board["id"]
         board_name = board["name"]
         board_path = self.user_storage + f"/{board_name}/"

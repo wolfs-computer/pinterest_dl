@@ -6,9 +6,10 @@ functions for CLI
 import os
 import sys
 from pinterest_dl.PinterestDL import PinterestDL
-from pinterest_dl import config_parser
+from pinterest_dl import config_functions
 from colorama import Style, Fore
 
+from pprint import pprint
 
 # PRE args
 
@@ -71,7 +72,7 @@ def user_add(config, args):
                 print("Found login data for:", user)
 
             # update config
-            config_parser.write_config(args.config_path, config)
+            config_functions.write_config(args.config_path, config)
         else:
             print(f"Invalid email: \"{user}\"")
 
@@ -127,12 +128,13 @@ def login(args, config, user, account, password):
             # update config
             if password != "":
                 config["users"][user]["password"] = password
-                config_parser.write_config(args.config_path, config)
+                config_functions.write_config(args.config_path, config)
 
                 login = True
             else:
                 print("\nEmpty password!")
                 sys.exit(1)
+
         except KeyboardInterrupt:
             print("\nEmpty password!")
             sys.exit(1)
@@ -156,7 +158,7 @@ def login(args, config, user, account, password):
             # update config
             config["users"][user]["is_logged_in"] = True
             config["users"][user]["cookie_file"] = account.get_cookies()
-            config_parser.write_config(args.config_path, config)
+            config_functions.write_config(args.config_path, config)
         else:
             print("Login failed")
 
@@ -312,10 +314,12 @@ def list_account(user, account):
 
         for section in board_sections:
             section_name = section["title"]
-            secton_pin_count = section["pin_count"]
-            content[board]["sections"].update({section_name: secton_pin_count})
+            section_pin_count = section["pin_count"]
+            content[board]["sections"].update({section_name: section_pin_count})
 
-            total_section_pin_count += secton_pin_count
+            if section_pin_count is None:
+                section_pin_count = 0
+            total_section_pin_count += section_pin_count
 
         content[board]["sections_pin_count"] = total_section_pin_count
         content[board]["board_pin_count"] = total_board_pin_count - total_section_pin_count
@@ -405,7 +409,7 @@ def arg_execute(args, config):
     # PRE
 
     # !! DEBUG option !!
-    if args.info:
+    if args.show_info:
         from pprint import pprint
         pprint(args)
         print(args.user_add)
@@ -452,7 +456,7 @@ def arg_execute(args, config):
 
 
     # update config with login state
-    config_parser.update_config(args.config_path, config)
+    config_functions.update_config(args.config_path, config)
 
 
     # after login args:
@@ -470,14 +474,15 @@ def arg_execute(args, config):
     if args.list_account:
         list_account(user, account)
 
-    # get section
-    if args.sections is not None:
-        get_sections(args, account)
-
-    # get boards
-    if args.boards is not None:
-        get_boards(args, account)
-
     # get all boards
     if args.all_boards:
         get_all_boards(account)
+    else:
+
+        # get section
+        if args.sections is not None:
+            get_sections(args, account)
+
+        # get boards
+        if args.boards is not None:
+            get_boards(args, account)

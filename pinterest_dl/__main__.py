@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 import sys
-from pinterest_dl import config_parser
-from pinterest_dl import arg_parser
-from pinterest_dl import arg_manager
+from pinterest_dl import config_functions
+from pinterest_dl import cli_parser
+from pinterest_dl import cli_functions
 
 
 def main():
@@ -12,7 +12,7 @@ def main():
     """
 
     # get CLI arguments:
-    parser = arg_parser.create_parser()
+    parser = cli_parser.create_parser()
 
     # if no options were given display help and exit
     if len(sys.argv) == 1:
@@ -22,11 +22,11 @@ def main():
     args = parser.parse_args()
 
     # get config:
-    config = config_parser.read_config(args.config_path)
+    config = config_functions.read_config(args.config_path)
 
     # start application:
     try:
-        arg_manager.arg_execute(args, config)
+        cli_functions.arg_execute(args, config)
     except KeyboardInterrupt:
         sys.exit('\nERROR: Interrupted by user')
 
