@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 functions to manipulate cookies of different accounts
 """
