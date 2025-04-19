@@ -1,0 +1,24 @@
+
+
+build system:
+    venv
+    proper requirements
+
+
+main core: (api to pinterest)
+    paths
+    m3u8 format
+    ...
+
+
+util core: (use as util)
+    paths
+
+
+
+output:
+    (need output driver)
+    progress bar
+    messages
+
+
