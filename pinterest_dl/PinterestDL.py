@@ -97,7 +97,7 @@ class PinterestDL:
             http_proxy = Proxy()
             http_proxy.proxy_type = ProxyType.MANUAL
             http_proxy.http_proxy = proxy
-            http_proxy.socks_proxy = proxy
+            http_proxy.socks_proxy = "socks5://127.0.0.1:9050"
             http_proxy.ssl_proxy = proxy
             http_proxy.add_to_capabilities(webdriver.DesiredCapabilities.FIREFOX)
 
@@ -115,7 +115,8 @@ class PinterestDL:
                 driver_exec = os.path.join(curent_dir, files[files.index(driver_exec_name)])
 
         if driver_exec is None:
-            gecko = GeckoDriverManager(path=self.driver_dir)
+            # print(f"{self.driver_dir}")
+            gecko = GeckoDriverManager()
             driver_exec = gecko.install()
             print("install driver")
 
@@ -132,7 +133,8 @@ class PinterestDL:
         """
 
         # setup selenium
-        self.selenium_setup(headless=True)
+        self.selenium_setup(headless=False)
+        sleep(5)
 
         # make a request with driver to pinterest login page
         self.driver.get("https://pinterest.com/login")
@@ -196,7 +198,7 @@ class PinterestDL:
         if self.proxies is not None:
             self.http.proxies = self.proxies
 
-        # self.http.proxies = {'http': 'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
+        self.http.proxies = {'http': 'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
         # self.http.proxies = {'https': 'socks5://127.0.0.1:9050'}
         # TOR example -> session.proxies = {'http': 'socks5://127.0.0.1:9050', 'https': 'socks5://127.0.0.1:9050'}
 
@@ -374,6 +376,7 @@ class PinterestDL:
         url = "https://www.pinterest.com/_ngjs/resource/BoardsResource/get/"
         url = url_builder.build_url(url, options, source_url=source_url)
 
+        # print(f"{url}")
         response = self.request(url)
 
         if response.status_code != 200:
